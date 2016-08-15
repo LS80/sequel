@@ -371,16 +371,16 @@ module Sequel
           synchronize(opts[:server]) do |conn|
             conn.execute(copy_table_sql(table, opts))
             begin
-              if block_given?
+              return Enumerator.new do |yielder|
                 while buf = conn.get_copy_data
-                  yield buf
+                  yielder << buf
                 end
-                nil
-              else
-                b = String.new
-                b << buf while buf = conn.get_copy_data
-                b
+              end unless block_given?
+
+              while buf = conn.get_copy_data
+                yield buf
               end
+              nil
             ensure
               raise DatabaseDisconnectError, "disconnecting as a partial COPY may leave the connection in an unusable state" if buf
             end
